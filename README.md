@@ -1,0 +1,3 @@
+# creating a byte stream for proof of work
+# need to order data upon loading as ordered dict and not a regular dict because upon hashing slight variation in data structure renders the blockchain invalid.
+# upon fixing loading files as ordered dict for correct hash reads, the problem remains unorderd dicts in open transactions. whereby if coins are not mined and multiple transactions take place, it will render the blockchain invalid.
