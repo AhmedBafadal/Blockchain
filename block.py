@@ -1,5 +1,5 @@
 from time import time
-from printable import Printable
+from utility.printable import Printable
 
 class Block(Printable):
     """Creating a block, where by every instance of the block will be independent, hence __init__"""
