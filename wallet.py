@@ -45,3 +45,11 @@ class Wallet:
         h = SHA256.new((str(sender)+ str(recipient)+str(amount)).encode('utf8')) # create a hash
         signature = signer.sign(h)
         return binascii.hexlify(signature).decode('ascii') #return a string that contains the signature/ created when new transaction occurs
+    @staticmethod
+    def verify_transaction(transaction):
+        
+        public_key = RSA.importKey(binascii.unhexlify(transaction.sender))
+        verifier = PKCS1_v1_5.new(public_key)
+        h = SHA256.new((str(transaction.sender)+ str(transaction.recipient)+str(transaction.amount)).encode('utf8')) # create a hash
+        return verifier.verify(h, binascii.unhexlify(transaction.signature))
+        

@@ -7,6 +7,7 @@ from utility.hash_util import hash_block
 from utility.verification import Verification
 from block import Block
 from transaction import Transaction
+from wallet import Wallet
 
 
 
@@ -145,7 +146,7 @@ class Blockchain:
         if self.hosting_node == None:
             return False
         transaction = Transaction(sender, recipient, signature, amount)
-        
+
         if Verification.verify_transaction(transaction, self.get_balance):
             self.__open_transactions.append(transaction)
             self.save_data()
@@ -173,9 +174,12 @@ class Blockchain:
         # Copy transaction instead of manipulating the original open_transactions list
         # This ensures that if mining should fail, the reward transaction would be prevented from being stored in the open transactions
         copied_transactions = self.__open_transactions[:]
+        block = Block(len(self.__chain), hashed_block, copied_transactions, proof)
+        for tx in block.transactions:
+            if not Wallet.verify_transaction(tx):
+                return False
         copied_transactions.append(reward_transaction) # adding mined block to system
 
-        block = Block(len(self.__chain), hashed_block, copied_transactions, proof)
         self.__chain.append(block)
         self.__open_transactions = []
         self.save_data()
