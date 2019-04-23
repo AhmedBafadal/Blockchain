@@ -21,6 +21,7 @@ owner = 'Ahmed'
 participants = {'Ahmed'}
 
 def load_data():
+    """Initialize blockchain + open transactions data from a file."""
     global blockchain
     global open_transactions
     try:
@@ -34,8 +35,8 @@ def load_data():
             blockchain = json.loads(file_content[0][:-1]) #avoid \n character
             updated_blockchain = []
             for block in blockchain:
-                converted_tx = [OrderedDict(
-                            [('sender', tx['sender']), ('recipient', tx['recipient']), ('amount',tx['amount'])]) for tx in block['transactions']] #creating an ordered dict for each transaction
+                converted_tx = [Transaction(tx['sender'], tx['recipient'], tx['amount']) for tx in block['transactions']]
+                
                 updated_block = Block(block['index'], block['previous_hash'], converted_tx, block['proof'], block['timestamp'])
                 
                 updated_blockchain.append(updated_block)
@@ -44,11 +45,10 @@ def load_data():
             open_transactions = json.loads(file_content[1])
             updated_transactions = []
             for tx in open_transactions:
-                updated_transaction = OrderedDict(
-                            [('sender', tx['sender']), ('recipient', tx['recipient']), ('amount',tx['amount'])])
+                updated_transaction = Transaction(tx['sender'], tx['recipient'], tx['amount'])
                 updated_transactions.append(updated_transaction)
             open_transactions = updated_transactions
-    except IOError:
+    except (IOError, IndexError):
         # Starting block for the blockchain
         genesis_block = Block(0,'',[],100, 0)
         
@@ -61,24 +61,26 @@ def load_data():
 load_data()
 
 def save_data():
+    """Save Blockchain + open transaction snapshot to a file."""
     try:
         with open('blockchain.txt', mode='w') as f:
-            saveable_chain = [block.__dict__ for block in blockchain]
+            saveable_chain = [block.__dict__ for block in [Block(block_el.index, block_el.previous_hash, [tx.__dict__ for tx in block_el.transactions] ,block_el.proof, block_el.timestamp) for block_el in blockchain]]
             f.write(json.dumps(saveable_chain))
             f.write('\n')
-            f.write(json.dumps(open_transactions))
+            saveable_tx = [tx.__dict__ for tx in open_transactions]
+            f.write(json.dumps(saveable_tx))
             # save_data = {
             #     'chain':blockchain,
             #     'ot': open_transactions
             # }
             # f.write(pickle.dumps(save_data))
-    except (IOError, IndexEerror):
+    except (IOError, IndexError):
         print('WARNING! Saving Failed!')
 
 
 def valid_proof(transactions, last_hash, proof):
     """Generates a new hash & checks if it fulfills the difficulty criteria"""
-    guess = (str(transactions) + str(last_hash) +str(proof)).encode()
+    guess = (str([tx.to_ordered_dict() for tx in transactions]) + str(last_hash) +str(proof)).encode()
     guess_hash = hash_string_256(guess)
     print(guess_hash)
     # Check if hash fulfills condition
@@ -102,10 +104,10 @@ def get_balance(participant):
     """
     # Fetch a list of all sent coin amounts for the given person (empty lists are returned if the person was NOT the sender)
     # This fetches sent amounts of transactions that were already included in blocks of the blockchain
-    tx_sender = [[tx['amount'] for tx in block.transactions if tx['sender'] == participant] for block in blockchain]
+    tx_sender = [[tx.amount for tx in block.transactions if tx.sender == participant] for block in blockchain]
     # Fetch a list of all sent coin amounts for the given person (empty lists are returned if the person was NOT the sender)
     # This fetches sent amounts of open transactions (to avoid double spending)
-    open_tx_sender = [tx['amount'] for tx in open_transactions if tx['sender'] == participant]
+    open_tx_sender = [tx.amount for tx in open_transactions if tx.sender == participant]
     tx_sender.append(open_tx_sender)
     print(tx_sender)
     # Calculate the total amount of coins sent
@@ -113,7 +115,7 @@ def get_balance(participant):
 
     # This fetches recieved coin amounts of transactions that were already included in blocks of the blockchain
     # Open transactions are ignored here because one should not be able to spend coins before the transaction was confirmed + included in a block
-    tx_recipient = [[tx['amount'] for tx in block.transactions if tx['recipient'] == participant] for block in blockchain]
+    tx_recipient = [[tx.amount for tx in block.transactions if tx.recipient == participant] for block in blockchain]
 
     amount_recieved = functools.reduce(lambda tx_sum, tx_amt: tx_sum+ sum(tx_amt) if len(tx_amt) > 0 else tx_sum+0, tx_recipient, 0)
 
@@ -134,8 +136,8 @@ def verify_transaction(transaction):
     Arguments:
         :transaction: The transaction that should be verified.
     """
-    sender_balance = get_balance(transaction['sender'])
-    return sender_balance >= transaction['amount']
+    sender_balance = get_balance(transaction.sender)
+    return sender_balance >= transaction.amount
 
 def verify_transactions():
     """Check if all open transactions are valid"""
@@ -151,11 +153,9 @@ def add_transaction(recipient, sender=owner, amount=1.0):
     # transaction = {'sender':sender, 
     #     'recipient':recipient, 
     #     'amount':amount}
-    transaction = OrderedDict([('sender', sender), ('recipient', recipient), ('amount',amount)])
+    transaction = Transaction(sender, recipient, amount)
     if verify_transaction(transaction):
         open_transactions.append(transaction)
-        participants.add(sender)
-        participants.add(recipient)
         save_data()
         return True
     return False
@@ -174,7 +174,8 @@ def mine_block():
     #     'recipient':owner,
     #     'amount': MINING_REWARD
     # }
-    reward_transaction = OrderedDict([('sender','MINING'),('recipient',owner),('amount',MINING_REWARD)])
+    
+    reward_transaction = Transaction('MINING', owner, MINING_REWARD)
     # Copy transaction instead of manipulating the original open_transactions list
     # This ensures that if mining should fail, the reward transaction would be prevented from being stored in the open transactions
     copied_transactions = open_transactions[:]
