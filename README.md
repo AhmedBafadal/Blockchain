@@ -1,4 +1,5 @@
 # created a byte stream for proof of work
+# Each node connected via HTTP
 # need to order data upon loading as ordered dict and not a regular dict because upon hashing.. any slight variations in data structure renders the blockchain invalid. (e.g. dict is not indexed, if values appear in alternate order could impact hash)
 # upon fixing loading files as ordered dict for correct hash reads, the problem remains unorderd dicts in open transactions. whereby if coins are not mined and multiple transactions take place, it will render the blockchain invalid.
 
