@@ -16,7 +16,15 @@ from wallet import Wallet
 MINING_REWARD = 10
 
 class Blockchain:
+    """The Blockchain class manages the chain of blocks as well as open transactions and the node on which it's running.
+    Attributes:
+        :chain: The list of blocks
+        :open_transactions (private): The list of open transactions
+        :hosting_node: The connected node (which runs the blockchain).
+    
+    """
     def __init__(self, hosting_node_id):
+        """Constructor of the Blockchain class."""
         # Starting block for the blockchain
         genesis_block = Block(0,'',[],100, 0)
         # Initializing empty blockchain list
@@ -24,17 +32,21 @@ class Blockchain:
         # Unhandled transactions
         self.__open_transactions = []
         self.hosting_node = hosting_node_id
+        self.__peer_nodes = set()
         self.load_data()
     
     @property
     def chain(self):
+        """Convert the chain attribute into a property with a getter and setter"""
         return self.__chain[:]
   
     @chain.setter
     def chain(self, val):
+        """Setter of chain property"""
         self.__chain = val
     
     def get_open_transactions(self):
+        """Returns a copy of the open transactions list."""
         return self.__open_transactions[:]
 
 
@@ -61,12 +73,14 @@ class Blockchain:
                     updated_blockchain.append(updated_block)
                     
                 self.chain = updated_blockchain # access without double underscore to trigger property setter
-                open_transactions = json.loads(file_content[1])
+                open_transactions = json.loads(file_content[1][:-1])
                 updated_transactions = []
                 for tx in open_transactions:
                     updated_transaction = Transaction(tx['sender'], tx['recipient'],tx['signature'] , tx['amount'])
                     updated_transactions.append(updated_transaction)
                 self.__open_transactions = updated_transactions
+                peer_nodes = json.loads(file_content[2])
+                self.__peer_nodes = set(peer_nodes)
         except (IOError, IndexError):
             pass
 
@@ -80,6 +94,8 @@ class Blockchain:
                 f.write('\n')
                 saveable_tx = [tx.__dict__ for tx in self.__open_transactions]
                 f.write(json.dumps(saveable_tx))
+                f.write('\n')
+                f.write(json.dumps(list(self._Blockchain__peer_nodes)))
                 # save_data = {
                 #     'chain':blockchain,
                 #     'ot': open_transactions
@@ -104,6 +120,9 @@ class Blockchain:
     def get_balance(self):
         """Calculate and return the balance for a participant.
         """
+        if self.hosting_node == None:
+            return None
+
         participant = self.hosting_node
         # Fetch a list of all sent coin amounts for the given person (empty lists are returned if the person was NOT the sender)
         # This fetches sent amounts of transactions that were already included in blocks of the blockchain
@@ -157,7 +176,7 @@ class Blockchain:
     def mine_block(self):
         """Create a new block and add open transactions to it."""
         if self.hosting_node == None:
-            return False
+            return None
         # Fetch the currently last block of the blockchain
         last_block = self.__chain[-1]
         # Hash the last block (=> to be able to compare it to the stored hash value)
@@ -177,11 +196,31 @@ class Blockchain:
         block = Block(len(self.__chain), hashed_block, copied_transactions, proof)
         for tx in block.transactions:
             if not Wallet.verify_transaction(tx):
-                return False
+                return None
         copied_transactions.append(reward_transaction) # adding mined block to system
 
         self.__chain.append(block)
         self.__open_transactions = []
         self.save_data()
         
-        return True
+        return block
+
+    def add_peer_node(self, node):
+        """Adds a new node to the peer node set.
+        Arguments:
+            :node: The node URL which should be added.
+        """
+        self.__peer_nodes.add(node)
+        self.save_data()
+    
+    def remove_peer_node(self, node):
+        """Removes a node from the peer node set.
+        Arguments:
+            :node: The node URL which should be added.
+        """
+        self.__peer_nodes.discard(node)
+        self.save_data()
+    
+    def get_peer_nodes(self):
+        """Return a list of all connected peer nodes"""
+        return list(self.__peer_nodes)

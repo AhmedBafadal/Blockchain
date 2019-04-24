@@ -1,20 +1,25 @@
 """Provides verification helper methods."""
+
 from utility.hash_util import hash_string_256, hash_block
 from wallet import Wallet
 
 class Verification:
-    """A helper class which offers various static and class-based verification"""
+    """A helper class which offers various static and class-based verification and validation methods"""
+
     @staticmethod
     def valid_proof(transactions, last_hash, proof):
-        """Validate a proof of work number and see if it solves the puzzle
+        """Validate a proof of work number and see if it solves the puzzle (two leading 0s)
         
         Arguments:
             :transactions: The Transactions fo the block for which the proof
             :last_hash: The previous block's hash which will be stored in the
             : proof: The proof number tested"""
+        # Create a string with all the hash inputs
         guess = (str([tx.to_ordered_dict() for tx in transactions]) + str(last_hash) +str(proof)).encode()
+        # Hash string
+        # NOTE: This is a different hash stored in the previous hash. Only used for proof of work algorithms.
         guess_hash = hash_string_256(guess)
-        print(guess_hash)
+        # Only a hash (based on the above inputs) which starts with two 0s is treated as valid.
         # Check if hash fulfills condition
         return guess_hash[0:2] == '00'
     
