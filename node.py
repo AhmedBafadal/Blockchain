@@ -54,7 +54,7 @@ def load_keys():
 @app.route('/balance', methods=['GET'])
 def get_balance():
     balance = blockchain.get_balance()
-    if balance != None:
+    if balance is not None:
         response = {
             'message': 'Fetched balance successfully.',
             'funds': balance
@@ -63,7 +63,7 @@ def get_balance():
     else:
         response = {
             'message': 'Loading balance failed.',
-            'wallet_set_up': wallet.public_key != None
+            'wallet_set_up': wallet.public_key is not None
         }
         return jsonify(response), 500
 
@@ -108,7 +108,6 @@ def broadcast_block():
     if 'block' not in values:
         response = {'message': 'Some data is missing.'}
         return jsonify(response), 400
-
     block = values['block']
     # Check if on peer node the index of the incoming block is higher than the index of the last block on that peer
     if block['index'] == blockchain.chain[-1].index + 1:
@@ -118,11 +117,16 @@ def broadcast_block():
 
         else:
             response = {'message':'Block seems invalid.'}
-            return jsonify(response),500
+            return jsonify(response),409
 
     # Else if the incoming block index is greater than our last block index
     elif block['index'] > blockchain.chain[-1].index:
-        pass
+        # If inbound blockchain larger than local (e.g. error on peer node)
+        response = {'message':'Blockchain appears to differ from local blockchain.'}
+        blockchain.resolve_conflicts = True
+        return jsonify(response), 200
+
+
         # Else incoming block is smaller than last block index - perhaps the blockchain node for which the this block, is on an older state and should notify the latent node
     else:
         response = {'message': 'Blockchain seems to be shorter, block not added.'}
@@ -131,7 +135,7 @@ def broadcast_block():
 
 @app.route('/transaction', methods=['POST'])
 def add_transaction():
-    if wallet.public_key == None:
+    if wallet.public_key is None:
         response = {
             'message': 'No wallet set up.'
         }
@@ -173,8 +177,12 @@ def add_transaction():
 
 @app.route('/mine', methods=['POST'])
 def mine():
+    # Dont mine block if conflicts exists. Also get this on peer node if the owner of the node and try to mine a block but another node previously sent a request that local blockchain is not in sync.
+    if blockchain.resolve_conflicts:
+        response = {'message': 'Resolve conflicts first, block not added!'}
+        return jsonify(response), 409
     block = blockchain.mine_block()
-    if block != None:
+    if block is not None:
         dict_block = block.__dict__.copy()
         dict_block['transactions'] = [tx.__dict__ for tx in dict_block['transactions']]
         response = {
@@ -187,9 +195,18 @@ def mine():
     else:
         response = {
             'message': 'Adding a block failed.',
-            'wallet_set_up': wallet.public_key != None
+            'wallet_set_up': wallet.public_key is not None
         }
         return jsonify(response), 500
+
+@app.route('/resolve-conflicts', methods=['POST'])
+def resolve_conflicts():
+    replaced = blockchain.resolve()
+    if replaced:
+        response = {'message': 'Chain was replaced!'}
+    else:
+        response = {'message': 'Local chain kept.'}
+    return jsonify(response), 200
 
 
 @app.route('/transactions', methods=['GET'])
@@ -233,7 +250,7 @@ def add_node():
 
 @app.route('/node/<node_url>', methods=['DELETE'])
 def remove_node(node_url):
-    if node_url == '' or node_url == None:
+    if node_url == '' or node_url is None:
         response = {
             'message': 'No node found.'
         }

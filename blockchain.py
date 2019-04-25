@@ -36,6 +36,7 @@ class Blockchain:
         self.public_key = public_key
         self.__peer_nodes = set()
         self.node_id = node_id
+        self.resolve_conflicts = False
         self.load_data()
     
     @property
@@ -120,8 +121,8 @@ class Blockchain:
     def get_balance(self, sender=None):
         """Calculate and return the balance for a participant.
         """
-        if sender == None:
-            if self.public_key == None:
+        if sender is None:
+            if self.public_key is None:
                 return None
             participant = self.public_key
         else:
@@ -190,7 +191,7 @@ class Blockchain:
 
     def mine_block(self):
         """Create a new block and add open transactions to it."""
-        if self.public_key == None:
+        if self.public_key is None:
             return None
         # Fetch the currently last block of the blockchain
         last_block = self.__chain[-1]
@@ -226,6 +227,8 @@ class Blockchain:
                 response = requests.post(url, json={'block': converted_block})
                 if response.status_code == 400 or response.status_code == 500:
                     print('Block declined, needs resolving.')
+                if response.status_code == 409:
+                    self.resolve_conflicts = True
             except requests.exceptions.ConnectionError:
                 continue
         return block
@@ -256,6 +259,32 @@ class Blockchain:
         return True
 
 
+    def resolve(self):
+        winner_chain = self.chain
+        replace = False ## Control whether current chain is being replaced
+        # Get a snapshot of blockcahin on every peer node to check which peer node has which blockchain & which one is correct.
+        for node in self.__peer_nodes:
+            url = 'http://{}/chain'.format(node)
+            try:
+                response = requests.get(url)
+                node_chain = response.json()
+                node_chain = [Block(block['index'], block['previous_hash'], [Transaction(tx['sender'], tx['recipient'], tx['signature'], tx['amount']) for tx in block['transactions']], block['proof'], block['timestamp']) for block in node_chain]
+                
+                node_chain_length = len(node_chain)
+                local_chain_length = len(winner_chain)
+                if node_chain_length > local_chain_length and Verification.verify_chain(node_chain):
+                    # if chain of peer node is longer and valid, use it as local chain
+                    winner_chain = node_chain
+                    replace = True
+            except requests.exceptions.ConnectionError:
+                continue # avoids break down code for node offline that cant be reached
+        self.resolve_conflicts = False
+        self.chain = winner_chain
+        if replace:
+            self.__open_transactions = []
+        self.save_data()
+        return replace
+
     def add_peer_node(self, node):
         """Adds a new node to the peer node set.
         Arguments:
@@ -277,3 +306,4 @@ class Blockchain:
     def get_peer_nodes(self):
         """Return a list of all connected peer nodes"""
         return list(self.__peer_nodes)
+    
