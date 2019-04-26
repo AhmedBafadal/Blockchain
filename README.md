@@ -66,28 +66,28 @@ This blockchain is not yet production ready due to several factors.
 
 Most noteably:
 
-    * Error Handling: needs improvement for different types errors. (Only accounted for nodes that may be offline during broadcasts)
+* Error Handling: needs improvement for different types errors. (Only accounted for nodes that may be offline during broadcasts)
 
-    * Scalability: Blockchain stored in a list and as text file. Bigger blockchain gets requires more memory to load & process and the more the nodes need to download
+* Scalability: Blockchain stored in a list and as text file. Bigger blockchain gets requires more memory to load & process and the more the nodes need to download
 
-    * Bandwidth costs: Downloading the entire chain will have significant costs as chain grows, in the 'resolve' function it querys all other       nodes to obtain the complete chain from each node. This is not applicable in production and need to validate the chain without  obtaining entire chain.
+* Bandwidth costs: Downloading the entire chain will have significant costs as chain grows, in the 'resolve' function it querys all other       nodes to obtain the complete chain from each node. This is not applicable in production and need to validate the chain without  obtaining entire chain.
 
-    * Peer Network: Broadcasting works but requires scheduled broadcasting or asyncronous broadcasting in a real blockchain. 
-    This is becuase in 'mine_block' method in 'blockchain.py' all peer nodes are contacted to be informed of the new block, but these peer nodes should also contact their peer nodes to let them know. But this was deliberately left out (in 'add_transaction' method in 'blockchain.py' there is a flag 'is_receiving=False') this is the same for incoming transactions. This is done because the danger is this leads to very long chain of informing other nodes which inform other nodes etc. It is not practical to wait for all responses as the original node mining the block.  
+* Peer Network: Broadcasting works but requires scheduled broadcasting or asyncronous broadcasting in a real blockchain. 
+This is becuase in 'mine_block' method in 'blockchain.py' all peer nodes are contacted to be informed of the new block, but these peer nodes should also contact their peer nodes to let them know. But this was deliberately left out (in 'add_transaction' method in 'blockchain.py' there is a flag 'is_receiving=False') this is the same for incoming transactions. This is done because the danger is this leads to very long chain of informing other nodes which inform other nodes etc. It is not practical to wait for all responses as the original node mining the block.  
 
 
 ## Next Steps
 Next steps to tackle limitations:  
 
-    * Scalability: Store in postgresql database instead of text
+* Scalability: Store in postgresql database instead of text
 
-    * Scalability: Load only parts of the blockchain into memory (requires recalibration of calculation of funds and validation of chain)
+* Scalability: Load only parts of the blockchain into memory (requires recalibration of calculation of funds and validation of chain)
 
-    * Broadcasting: To solve the limitations in broadcasting, need to develop a scheduling task where information is sent out to peer nodes and there is no need to wait for a response, but query them at a later point in time or set up a web socket connection (live connection between peers and not a push connection as in this project).
+* Broadcasting: To solve the limitations in broadcasting, need to develop a scheduling task where information is sent out to peer nodes and there is no need to wait for a response, but query them at a later point in time or set up a web socket connection (live connection between peers and not a push connection as in this project).
 
-    * Mining Difficulty: Mining occurs by generating a new block via proof of work, but the difficulty can be increased dynamically based on        the length of the blockchain and coins in circulation (e.g. first few blocks added quickly but as blockchain grows and the more coins   are in the system, the longer it should take to mine a new block)
+* Mining Difficulty: Mining occurs by generating a new block via proof of work, but the difficulty can be increased dynamically based on        the length of the blockchain and coins in circulation (e.g. first few blocks added quickly but as blockchain grows and the more coins   are in the system, the longer it should take to mine a new block)
 
-    * Merkle Tree: For validating and analysing transactions could look into using a Merkle Tree. Currently in this project, transactions are       verified by going through all transactions in all blocks which are individually verified. For significantly larger transaction              volumes in each block, this will be highly resource intensive. Merkle tree can be a more efficient manner of hashing the verified           transactions and to easily validate if that hash is correct and therefore validate your transactions in bulk.
+* Merkle Tree: For validating and analysing transactions could look into using a Merkle Tree. Currently in this project, transactions are       verified by going through all transactions in all blocks which are individually verified. For significantly larger transaction              volumes in each block, this will be highly resource intensive. Merkle tree can be a more efficient manner of hashing the verified           transactions and to easily validate if that hash is correct and therefore validate your transactions in bulk.
 
 
 
