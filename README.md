@@ -85,7 +85,7 @@ Next steps to tackle limitations and improve the blockchain:
 
 * Broadcasting: To solve the limitations in broadcasting, need to develop a scheduling task where information is sent out to peer nodes and there is no need to wait for a response, but query them at a later point in time or set up a web socket connection (live connection between peers and not a push connection as in this project).
 
-* Mining Difficulty: Mining occurs by generating a new block via proof of work, but the difficulty can be increased dynamically based on        the length of the blockchain and coins in circulation (e.g. first few blocks added quickly but as blockchain grows and the more coins   are in the system, the longer it should take to mine a new block)
+* Mining Difficulty: Mining occurs by generating a new block via proof of work, but the difficulty can be increased dynamically based on        the length of the blockchain and coins in circulation (e.g. first few blocks added quickly but as blockchain grows and the more coins are in the system, the longer it should take to mine a new block).
 
 * Merkle Tree: For validating and analysing transactions could look into using a Merkle Tree. Currently in this project, transactions are       verified by going through all transactions in all blocks which are individually verified. For significantly larger transaction              volumes in each block, this will be highly resource intensive. Merkle tree can be a more efficient manner of hashing the verified           transactions and to easily validate if that hash is correct and therefore validate your transactions in bulk.
 
